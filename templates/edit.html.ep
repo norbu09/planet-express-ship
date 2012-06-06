@@ -1,0 +1,97 @@
+% layout 'default';
+% $page->{title} = 'new' unless exists $page->{title};
+% $page->{type} = 'content_page' unless exists $page->{type};
+% title 'edit ' . $page->{title};
+
+<div class="row">
+    <div class="span2">
+        <h1>edit <small>or</small></h1>
+        <p>
+        <form class="form-horizontal well" method="post" action="/delete/<%= $page->{path} %>">
+            <button type="submit" class="btn btn-danger">delete Page</button>
+        </form>
+        </p>
+    </div>
+    <div class="span10">
+        <form class="form-horizontal well" method="post">
+            <input type="hidden" name="type" value="<%= $page->{type} %>">
+            <fieldset>
+                <legend>"<%= $page->{title} %>" page</legend>
+                <% my $fields = get_forms($page->{type}); %>
+                <% foreach my $field (@{$fields}){ %>
+                <% my($name, $type) = each(%{$field}); %>
+                <%= include('includes/'.$type, name => $name) %>
+                <% } %>
+                <div class="control-group">
+                    <label class="control-label" for="path">Path</label>
+                    <div class="controls">
+                        <div class="input-prepend">
+                            <span class="add-on">/</span>
+                            <input type="text" class="span4" id="path" placeholder="path ..." name="path" value="<%= $page->{path} %>">
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="menu">Options</label>
+                    <div class="controls">
+                        <label class="checkbox">
+                            <input type="checkbox" id="menu" name="menu" <%= $page->{menu} %>>
+                            include page in header menu
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" id="active" name="active" <%= $page->{active} %>>
+                            activate page
+                        </label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="reset" class="btn">cancel</button>
+                    <button type="submit" class="btn btn-success">Save changes</button>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</div>
+<script>
+
+function inject(callback) {
+    var baseUrl = "/js/ace/";
+    
+    var load = window.__ace_loader__ = function(path, module, callback) {
+        var head = document.getElementsByTagName('head')[0];
+        var s = document.createElement('script');
+    
+        s.src = baseUrl + path;
+        head.appendChild(s);
+        
+        s.onload = function() {
+            window.__ace_shadowed__.require([module], callback);
+        };
+    };
+
+    load('ace-bookmarklet.js', "ace/ext/textarea", function() {
+        var ace = window.__ace_shadowed__;
+        
+        ace.options.mode = "markdown";
+        var Event = ace.require("ace/lib/event");
+        var areas = document.getElementsByTagName("textarea");
+        for (var i = 0; i < areas.length; i++) {
+            Event.addListener(areas[i], "click", function(e) {
+                if (e.detail == 3) {
+                    ace.transformTextarea(e.target, load);
+                }
+            });
+        }
+        callback && callback();
+    });
+}
+// Call the inject function to load the ace files.
+var textAce;
+inject(function () {
+    // Transform the textarea on the page into an ace editor.
+    var ace = window.__ace_shadowed__;
+    var t = document.querySelector("textarea");
+    textAce = ace.transformTextarea(t, window.__ace_loader__);
+});
+
+</script>

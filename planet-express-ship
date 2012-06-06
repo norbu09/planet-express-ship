@@ -1,0 +1,191 @@
+#!/usr/bin/env perl
+use Mojolicious::Lite;
+
+my $config = plugin Config => {
+    file      => 'etc/planet-express-ship.conf',
+    stash_key => 'conf'
+};
+
+plugin 'CouchAuth', $config->{couch};
+plugin 'MicroPage', $config->{couch};
+plugin 'FormValidate';
+plugin 'Mail', $config->{mail};
+
+get '/' => sub {
+    my $self = shift;
+    $self->render('index');
+};
+
+### login handling ###
+get '/login' => sub {
+    my ($self) = @_;
+    $self->redirect_to('dashboard') if $self->auth();
+};
+
+post '/login' => sub {
+    my $self = shift;
+
+    $self->auth();
+    $self->redirect_to('/dashboard');
+};
+
+get '/logout' => sub {
+    my $self = shift;
+    $self->session( expires => 1 );
+    $self->redirect_to('/');
+};
+
+post '/signup' => sub {
+    my $self = shift;
+
+    my $params = $self->process_form() || return;
+
+    my $user =  $self->signup_user($params);
+    unless ( $user) {
+        $self->redirect_to('/login');
+        return;
+    }
+    $self->redirect_to('/dashboard');
+};
+
+### password reset stuff ###
+get '/reset_password';
+
+get '/reset_password/:id' => sub {
+    my $self = shift;
+
+    my $reset = $self->get_password_reset( $self->param('id') );
+    if ($reset) {
+        $self->stash( reset_request => $reset );
+    }
+    else {
+        $self->flash(
+            error => "We could not find your password reset
+            request. Maybe it expired or it was used already."
+        );
+        $self->redirect_to('/');
+    }
+} => 'update_password';
+
+post '/reset_password' => sub {
+    my $self = shift;
+
+    if ( my $reply = $self->add_password_reset() ) {
+        $self->stash( mail => $reply->{user}->{username} );
+        # TODO this should go into a template
+        $self->mail(
+            to      => $reply->{user}->{username},
+            subject => 'Password reset request for: '
+              . $reply->{user}->{username},
+            data => "Hi,\n\nWe received a password reset request for your "
+            .$self->{config}->{site}->{name}." user account. If you want to reset your password now please"
+            ." click on the following link:\n\n ".$self->{config}->{site}->{url}."/reset_password/"
+            . $reply->{id} . "\n\nCheers!\nYour 'get it fixed' team.\n",
+        );
+        $self->flash( message => "Your reset password request was sent to: "
+              . $reply->{user}->{username} );
+        $self->redirect_to('/');
+    }
+    else {
+        $self->flash(
+            error => 'We could not find your account with the username: '
+              . $self->param('username') );
+        $self->redirect_to('/reset_password');
+    }
+};
+
+post '/reset_password/:id' => sub {
+    my $self = shift;
+
+    $self->update_password();
+    $self->expire_password_reset( $self->param('id') );
+    $self->flash( message => 'Your password was updated successfully' );
+    $self->redirect_to('/login');
+};
+
+# Admin section
+group {
+## admin stuff below here
+    under sub {
+        my $self = shift;
+
+        # Authenticated
+        return 1 if $self->auth();
+
+        # Not authenticated
+        if ( $self->stash('format') eq 'json' ) {
+            $self->render(
+                json   => { error => "Wrong username or password!" },
+                status => 402
+            );
+            return;
+        }
+        $self->flash( error => "Wrong username or password!" );
+        $self->redirect_to('login');
+        return;
+    };
+
+    any '/dashboard' => sub {
+        my $self = shift;
+    } => 'dashboard';
+
+    get '/profile' => sub {
+        my $self = shift;
+        $self->stash(user => $self->get_user());
+    } => 'profile';
+
+    post '/profile' => sub {
+        my $self = shift;
+        unless($self->update_user()){
+            $self->flash( error => "Could not update Profile!" );
+            $self->redirect_to('/profile');
+            return;
+        }
+        $self->flash( message => "Successfully updated your Profile!" );
+        $self->redirect_to('/dashboard');
+    };
+
+    get '/edit' => sub {
+        my $self = shift;
+
+        $self->stash(page => {});
+    } => 'edit';
+
+    get '/edit/*chunk' => sub {
+        my $self = shift;
+
+        $self->stash( page => $self->get_content( $self->param('chunk'), 'raw' ) );
+    } => 'edit';
+
+    post '/edit/*chunk' => sub {
+        my $self = shift;
+
+        $self->update_content( $self->param('chunk'),
+            $self->req->params->to_hash() );
+        $self->redirect_to( '/' . $self->param('chunk') );
+    };
+    post '/delete/*chunk' => sub {
+        my $self = shift;
+
+        $self->delete_content( $self->param('chunk') );
+        $self->flash( message => "Successfully deleted ".$self->param('chunk') );
+        $self->redirect_to('/dashboard');
+    };
+    post '/edit' => sub {
+        my $self = shift;
+
+        my $path = $self->create_content( $self->req->params->to_hash() );
+        $self->redirect_to( '/' . $path );
+    };
+};
+
+# fallback for CMS pages
+get '/*chunk' => sub {
+    my $self = shift;
+
+    my $page = $self->get_content( $self->param('chunk') );
+    $self->stash( page => $page );
+    $self->stash( template => $page->{type} || '404' );
+};
+
+app->start;

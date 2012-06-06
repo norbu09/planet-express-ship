@@ -1,0 +1,122 @@
+% my @time = localtime;
+% my $update_path = get_update_path();
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title><%= $config->{site}->{name} %> - <%= title %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="springtimesoft LTD">
+
+    <!-- Le styles -->
+    <link href="/css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 80px;
+        padding-bottom: 40px;
+      }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+    </style>
+    <link href="/css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/ico/apple-touch-icon-57-precomposed.png">
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container-fluid">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <% if(session->{name}){ %>
+          <a class="brand" href="/dashboard"><%= $config->{site}->{name} %></a>
+          <div class="btn-group pull-right">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              <i class="icon-user"></i> <%= session->{name} %>
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <li><a href="/profile">Profile</a></li>
+              <li class="divider"></li>
+              <li><a href="/logout">Sign Out</a></li>
+            </ul>
+          </div>
+          <% } else { %>
+          <a class="brand" href="/"><%= $config->{site}->{name} %></a>
+          <div class="btn-group pull-right">
+            <form class="form-inline" method="post" action="/login">
+              <input type="text" name="username" class="input-small" placeholder="Email">
+              <input type="password" name="password" class="input-small" placeholder="Password">
+              <button type="submit" class="btn">Sign in</button>
+            </form>
+          </div>
+          <% } %>
+          <div class="nav-collapse">
+            <ul class="nav">
+              <% foreach my $item (nav){ %>
+              <li<%== active_menu($item) %>><a href="/<%= $item %>"><%= ucfirst($item) %></a></li>
+              <% } %>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+        <section id="notify">
+        <% if (my $message = flash 'error' ) { %> 
+        <div class="alert alert-error fade in">
+            <button class="close" data-dismiss="alert">x</button>
+            <p><strong>Darn!</strong> <%= $message %></p>
+        </div>
+        <% } %>
+        <% if (my $message = flash 'message' ) { %> 
+        <div class="alert alert-message info fade in" data-alert="alert">
+            <button class="close" data-dismiss="alert">x</button>
+            <p><strong>Just letting you know!</strong> <%= $message %></p>
+        </div>
+        <% } %>
+        </section>
+
+        <section id="content">
+        <%= content %>
+        </section>
+
+      <hr>
+
+      <% if(session->{admin} && $update_path){ %>
+      <a href="/edit/<%= $update_path %>">edit</a>
+      <% } %>
+      <footer>
+        <center>
+            <p><small>&copy; <%= $config->{site}->{company} %> <%= $time[5] + 1900 %></small></p>
+        </center>
+      </footer>
+
+    </div><!--/.fluid-container-->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+  </body>
+</html>

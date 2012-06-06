@@ -1,0 +1,6 @@
+<div class="control-group">
+    <label class="control-label" for="<%= $name %>"><%= ucfirst($name) %></label>
+    <div class="controls">
+        <textarea class="editor" id="<%= $name %>" name="<%= $name %>"><%= $page->{$name} %></textarea>
+    </div>
+</div>

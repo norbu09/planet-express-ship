@@ -1,0 +1,8 @@
+% layout 'default';
+% title $page->{title};
+
+<div class="row">
+  <div class="span9">
+      <%== $page->{content} %>
+  </div>
+</div>

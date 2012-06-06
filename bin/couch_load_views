@@ -1,0 +1,142 @@
+#!/usr/bin/env perl
+
+use common::sense;
+use Store::CouchDB;
+use Config::Tiny;
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+use File::Util;
+
+my $help;
+my $man;
+my $conf = '.couchdb';
+my $dir;
+my $debug = 0;
+
+my $from = pop(@ARGV);
+
+GetOptions(
+    "config|c=s"  => \$conf,
+    "export|e=s"  => \$dir,
+    'help|?'      => \$help,
+    "man"         => \$man,
+    "debug|d"     => \$debug,
+) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
+
+pod2usage(1) unless $from;
+
+my ($host, $db, $view) = split(/\//, $from);
+
+my $c = Config::Tiny->new();
+$c = Config::Tiny->read( $conf );
+
+die "Could not find configuration for " . $host
+    unless $c->{$host};
+
+$dir = $c->{_}->{export_dir} unless $dir;
+my $vdir = "$dir/$host/$db/$view";
+die "Could not find view directory: $vdir"
+    unless -d $vdir;
+
+my $couch = Store::CouchDB->new();
+$couch->debug(1) if $debug;
+$couch->config( $c->{$host} );
+$couch->db($db);
+
+my($f) = File::Util->new();
+my $view = {};
+foreach my $file ($f->list_dir($vdir, qw/ --files-only/)){
+    my @doc = $f->load_file(join('/',$vdir,$file), qw/ --as-lines/);
+    my $hash;
+    my $now;
+    my $name;
+    foreach (@doc){
+        if($_ =~ /^\[(\w+)\]$/){
+            $now = $1;
+            next;
+        }
+        if($now eq 'params'){
+            my ($ky, $vl) = split(/\s*=\s*/, $_, 2);
+            if($ky eq 'name'){
+                $name = $vl;
+                next;
+            }
+            $view->{$ky} = $vl;
+        } else {
+            $hash->{$now} .= $_."\n";
+        }
+    }
+    $view->{views}->{$name} = $hash;
+}
+
+print "finding\n";
+my $doc = $couch->get_doc({ id => $view->{_id} });
+#if($doc) {
+#    print "deleting old\n";
+#    $couch->del_doc({ id => $view->{_id} });
+#}
+print "storing\n";
+delete $view->{_rev} unless $doc;
+$view->{_rev} = $doc->{_rev} if $doc;
+my $id = $couch->put_doc({ doc => $view } );
+
+print "Saved $id\n" if $id;
+print "Error saving views!\n" unless $id;
+
+=head1 NAME
+
+couch_load_views - load views from dump
+
+=head1 VERSION
+
+Version 0.1
+
+=head1 SYNOPSIS
+
+This is a simple copy script that copies one document to a new one
+
+  copy [options] [host/db/view]
+    -c      configuration file
+    -e      export directory
+    -?      brief help
+    -man    long help
+
+    the host part in the two copy arguments have to be config sections
+    in the config file. In the config file the definition looks like
+    this:
+
+        [pumpkin]
+            host = 127.0.0.1
+            port = 5985
+    so the command line would look like this:
+
+      couch_load_views pumpkin/log/auth
+
+=head1 AUTHOR
+
+Lenz Gschwendtner, C<< <lenz@springtimesoft.com> >>
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<< <lenz@springtimesoft.com> >>
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc couch_load_views
+
+=head1 ACKNOWLEDGEMENTS
+
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright 2009 Lenz Gschwendtner, springtimesoft LTD, all rights reserved.
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=cut

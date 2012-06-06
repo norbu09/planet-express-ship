@@ -1,0 +1,14 @@
+[map]
+(function(doc) {
+  if ( doc.type === 'template' ) {
+    emit(doc.name, 1);
+  }
+})
+
+
+
+[params]
+name = templates
+language = javascript
+_id = _design/site
+_rev = 8-bbf51529c95ab2aa23e7944ca020596e

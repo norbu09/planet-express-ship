@@ -1,0 +1,11 @@
+% layout 'default';
+% title 'Welcome';
+
+<div class="row">
+  <div class="span3">
+      <h1><%= $config->{site}->{name} %></h1>
+  </div>
+  <div class="span9">
+      <h3>Welcome to <%= $config->{site}->{name} %></h3>
+  </div>
+</div>
