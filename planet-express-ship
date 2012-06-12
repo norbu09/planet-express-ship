@@ -6,10 +6,17 @@ my $config = plugin Config => {
     stash_key => 'conf'
 };
 
+plugin 'CouchUser', $config->{couch};
 plugin 'CouchAuth', $config->{couch};
 plugin 'MicroPage', $config->{couch};
 plugin 'FormValidate';
 plugin 'Mail', $config->{mail};
+
+# replace 'CouchAuth' with this to have facebook auth:
+#plugin 'FacebookAuth', $config->{facebook};
+
+# for an invite only based platform use this:
+#plugin 'InviteCodes',  $config->{couch};
 
 get '/' => sub {
     my $self = shift;
@@ -31,7 +38,7 @@ post '/login' => sub {
 
 get '/logout' => sub {
     my $self = shift;
-    $self->session( expires => 1 );
+    $self->session(expires => 1);
     $self->redirect_to('/');
 };
 
@@ -40,8 +47,8 @@ post '/signup' => sub {
 
     my $params = $self->process_form() || return;
 
-    my $user =  $self->signup_user($params);
-    unless ( $user) {
+    my $user = $self->signup_user($params);
+    unless ($user) {
         $self->redirect_to('/login');
         return;
     }
@@ -54,15 +61,14 @@ get '/reset_password';
 get '/reset_password/:id' => sub {
     my $self = shift;
 
-    my $reset = $self->get_password_reset( $self->param('id') );
+    my $reset = $self->get_password_reset($self->param('id'));
     if ($reset) {
-        $self->stash( reset_request => $reset );
+        $self->stash(reset_request => $reset);
     }
     else {
         $self->flash(
-            error => "We could not find your password reset
-            request. Maybe it expired or it was used already."
-        );
+            error => "We could not find your password reset request." . " "
+                . "Maybe it expired or it was used already.");
         $self->redirect_to('/');
     }
 } => 'update_password';
@@ -70,26 +76,31 @@ get '/reset_password/:id' => sub {
 post '/reset_password' => sub {
     my $self = shift;
 
-    if ( my $reply = $self->add_password_reset() ) {
-        $self->stash( mail => $reply->{user}->{username} );
+    if (my $reply = $self->add_password_reset()) {
+        $self->stash(mail => $reply->{user}->{username});
+
         # TODO this should go into a template
         $self->mail(
             to      => $reply->{user}->{username},
             subject => 'Password reset request for: '
-              . $reply->{user}->{username},
+                . $reply->{user}->{username},
             data => "Hi,\n\nWe received a password reset request for your "
-            .$self->{config}->{site}->{name}." user account. If you want to reset your password now please"
-            ." click on the following link:\n\n ".$self->{config}->{site}->{url}."/reset_password/"
-            . $reply->{id} . "\n\nCheers!\nYour 'get it fixed' team.\n",
+                . $self->{config}->{site}->{name}
+                . " user account. If you want to reset your password now please"
+                . " click on the following link:\n\n "
+                . $self->{config}->{site}->{url}
+                . "/reset_password/"
+                . $reply->{id}
+                . "\n\nCheers!\nYour 'get it fixed' team.\n",
         );
-        $self->flash( message => "Your reset password request was sent to: "
-              . $reply->{user}->{username} );
+        $self->flash(message => "Your reset password request was sent to: "
+                . $reply->{user}->{username});
         $self->redirect_to('/');
     }
     else {
         $self->flash(
             error => 'We could not find your account with the username: '
-              . $self->param('username') );
+                . $self->param('username'));
         $self->redirect_to('/reset_password');
     }
 };
@@ -98,14 +109,56 @@ post '/reset_password/:id' => sub {
     my $self = shift;
 
     $self->update_password();
-    $self->expire_password_reset( $self->param('id') );
-    $self->flash( message => 'Your password was updated successfully' );
+    $self->expire_password_reset($self->param('id'));
+    $self->flash(message => 'Your password was updated successfully');
     $self->redirect_to('/login');
 };
 
-# Admin section
+# required for auth providers with callbacks (any OAuth like facebook, twitter)
+get '/auth' => sub {
+    my $self = shift;
+
+    if ($self->auth()) {
+        $self->redirect_to(delete $self->session->{initial_page});
+    }
+    else {
+        $self->flash(error => "Authentication failed");
+        $self->redirect_to('/');
+    }
+};
+
+# TODO: currently based on fb_uid in session, should be a generic provider uid
+any '/invite/:code' => sub {
+    my $self = shift;
+
+    unless ($self->param('code')) {
+        $self->flash(error => "invite code missing");
+        $self->redirect_to('/');
+    }
+
+    $self->check_invite($self->param('code'))
+        unless (exists $self->session->{invite_code});
+
+    if (exists $self->session->{invite_code}) {
+        if ($self->session->{fb_uid}) {
+
+            # create_user() has to be implemented by the *Auth plugin
+            $self->create_user();
+            if ($self->use_invite()) {
+                $self->redirect_to('/dashboard');
+            }
+        }
+        else {
+            $self->auth();
+        }
+    }
+
+    $self->flash(error => 'invalid or already used invite code');
+    $self->redirect_to('/');
+};
+
+# Authenticated user section
 group {
-## admin stuff below here
     under sub {
         my $self = shift;
 
@@ -113,21 +166,26 @@ group {
         return 1 if $self->auth();
 
         # Not authenticated
-        if ( $self->stash('format') eq 'json' ) {
+        if ($self->stash('format') eq 'json') {
             $self->render(
                 json   => { error => "Wrong username or password!" },
-                status => 402
+                status => 402,
             );
             return;
         }
-        $self->flash( error => "Wrong username or password!" );
+        $self->flash(error => "Wrong username or password!");
+
+        # change redirect to 'auth' to make it work with an OAuth provider
+        #$self->redirect_to('auth');
         $self->redirect_to('login');
+
         return;
     };
 
-    any '/dashboard' => sub {
+    # user dashboard
+    get '/dashboard' => sub {
         my $self = shift;
-    } => 'dashboard';
+    };
 
     get '/profile' => sub {
         my $self = shift;
@@ -136,46 +194,96 @@ group {
 
     post '/profile' => sub {
         my $self = shift;
-        unless($self->update_user()){
-            $self->flash( error => "Could not update Profile!" );
+
+        unless ($self->update_user()) {
+            $self->flash(error => "Could not update Profile!");
             $self->redirect_to('/profile');
             return;
         }
-        $self->flash( message => "Successfully updated your Profile!" );
+
+        $self->flash(message => "Successfully updated your Profile!");
         $self->redirect_to('/dashboard');
     };
 
+    get '/invite' => sub {
+        my $self = shift;
+
+        my $code = $self->create_invite();
+
+        if ($self->stash('format') eq 'json') {
+            $self->render(json => { code => $code });
+        }
+        else {
+            $self->stash(code => $code);
+        }
+    };
+};
+
+# Admin section
+group {
+    under '/admin' => sub {
+        my $self = shift;
+
+        # Authenticated
+        return 1 if ($self->auth() and $self->session->{admin});
+
+        # Not authenticated
+        if ($self->stash('format') eq 'json') {
+            $self->render(
+                json   => { error => "Wrong username or password!" },
+                status => 402,
+            );
+            return;
+        }
+        else {
+            $self->flash(error => "Wrong username or password!");
+            $self->redirect_to('login');
+        }
+        return;
+    };
+
+    # /admin/dashboard
+    get '/dashboard' => sub {
+        my $self = shift;
+    };
+
+    # /admin/edit
     get '/edit' => sub {
         my $self = shift;
 
         $self->stash(page => {});
-    } => 'edit';
+    };
 
+    post '/edit' => sub {
+        my $self = shift;
+
+        my $path = $self->create_content($self->req->params->to_hash());
+        $self->redirect_to('/' . $path);
+    };
+
+    # /admin/edit/<page>
     get '/edit/*chunk' => sub {
         my $self = shift;
 
-        $self->stash( page => $self->get_content( $self->param('chunk'), 'raw' ) );
-    } => 'edit';
+        $self->stash(page => $self->get_content($self->param('chunk'), 'raw'));
+    } => 'admin/edit';
 
     post '/edit/*chunk' => sub {
         my $self = shift;
 
-        $self->update_content( $self->param('chunk'),
-            $self->req->params->to_hash() );
-        $self->redirect_to( '/' . $self->param('chunk') );
+        $self->update_content($self->param('chunk'),
+            $self->req->params->to_hash());
+        $self->redirect_to('/' . $self->param('chunk'));
     };
+
+    # /admin/delete/<page>
     post '/delete/*chunk' => sub {
         my $self = shift;
 
-        $self->delete_content( $self->param('chunk') );
-        $self->flash( message => "Successfully deleted ".$self->param('chunk') );
-        $self->redirect_to('/dashboard');
-    };
-    post '/edit' => sub {
-        my $self = shift;
-
-        my $path = $self->create_content( $self->req->params->to_hash() );
-        $self->redirect_to( '/' . $path );
+        $self->delete_content($self->param('chunk'));
+        $self->flash(
+            message => "Successfully deleted " . $self->param('chunk'));
+        $self->redirect_to('/admin/dashboard');
     };
 };
 
@@ -183,9 +291,9 @@ group {
 get '/*chunk' => sub {
     my $self = shift;
 
-    my $page = $self->get_content( $self->param('chunk') );
-    $self->stash( page => $page );
-    $self->stash( template => $page->{type} || '404' );
+    my $page = $self->get_content($self->param('chunk'));
+    $self->stash(page => $page);
+    $self->stash(template => $page->{type} || '404');
 };
 
 app->start;

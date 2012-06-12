@@ -1,12 +1,6 @@
 % layout 'default';
 % title 'Dashboard';
 
-<div class="row">
-    <div class="span2">
-        <h1>dashboard</h1>
-    </div>
-    <div class="span10">
-    <h3>admin tasks</h3>
-    <a href="/edit">create new page</a>
-    </div>
+<div class="container">
+    I'm the user dashboard, please fill me with stuff!
 </div>

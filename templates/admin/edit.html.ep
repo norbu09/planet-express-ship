@@ -7,7 +7,7 @@
     <div class="span2">
         <h1>edit <small>or</small></h1>
         <p>
-        <form class="form-horizontal well" method="post" action="/delete/<%= $page->{path} %>">
+        <form class="form-horizontal well" method="post" action="/admin/delete/<%= $page->{path} %>">
             <button type="submit" class="btn btn-danger">delete Page</button>
         </form>
         </p>
@@ -17,11 +17,11 @@
             <input type="hidden" name="type" value="<%= $page->{type} %>">
             <fieldset>
                 <legend>"<%= $page->{title} %>" page</legend>
-                <% my $fields = get_forms($page->{type}); %>
-                <% foreach my $field (@{$fields}){ %>
-                <% my($name, $type) = each(%{$field}); %>
-                <%= include('includes/'.$type, name => $name) %>
-                <% } %>
+                % my $fields = get_forms($page->{type});
+                % foreach my $field (@{ $fields }) {
+                % my ($name, $type) = each(%{ $field });
+                %= include('includes/' . $type, name => $name)
+                % }
                 <div class="control-group">
                     <label class="control-label" for="path">Path</label>
                     <div class="controls">

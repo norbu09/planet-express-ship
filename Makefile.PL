@@ -21,6 +21,7 @@ WriteMakefile(
       'Store::CouchDB' => 0,
       'Text::Upskirt' => 0,
       'common::sense' => 0,
+      'WWW::Facebook::API' => 0,
   },
   test      => {TESTS => 't/*.t'}
 );

@@ -1,0 +1,19 @@
+[map]
+(function(doc) {
+  if (
+    doc.type === 'user' &&
+    doc.active &&
+    doc.fb_uid
+  ) {
+    emit(doc._id, 1);
+  }
+})
+
+
+
+
+[params]
+name = by_facebook
+language = javascript
+_id = _design/user
+_rev = 2-04b438fc5ed5e20c4e9dbce7a113c9cb
