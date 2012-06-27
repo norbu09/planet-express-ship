@@ -3,7 +3,7 @@ Planet Express Ship
 
 a Mojolicious::Lite Bootsrap CouchDB application starter
 
-![Planet Express Ship](CouchD://upload.wikimedia.org/wikipedia/en/c/c1/Futurama_Planet_Express_spaceship.jpg)
+![Planet Express Ship](http://upload.wikimedia.org/wikipedia/en/c/c1/Futurama_Planet_Express_spaceship.jpg)
 
 getting started
 ---------------
