@@ -91,7 +91,7 @@ post '/reset_password' => sub {
                 . $self->{config}->{site}->{url}
                 . "/reset_password/"
                 . $reply->{id}
-                . "\n\nCheers!\nYour 'get it fixed' team.\n",
+                . "\n\nCheers!\nYour '".$self->{config}->{site}->{name}."' team.\n",
         );
         $self->flash(message => "Your reset password request was sent to: "
                 . $reply->{user}->{username});
