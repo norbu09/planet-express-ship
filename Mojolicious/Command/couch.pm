@@ -4,6 +4,7 @@ use Mojo::Base 'Mojolicious::Command';
 use Getopt::Long 'GetOptions';
 use Store::CouchDB;
 use File::Util;
+use File::Path qw(mkpath);
 use Data::Dumper;
 
 # Short description
@@ -34,11 +35,14 @@ sub run {
         unless exists $app->{config}->{couch}->{view_dir};
     my $couch = Store::CouchDB->new($app->{config}->{couch});
     GetOptions(
-        'l|load'    => \&load($couch,      $app),
-        'd|dump'    => \&dump($couch,      $app),
-        'c|create'  => \&create($couch,    $app),
-        'bootstrap' => \&bootstrap($couch, $app));
+        'l|load'    => sub { load($couch,      $app) },
+        'd|dump'    => sub { cdump($couch,      $app) },
+        'c|create'  => sub { create($couch,    $app) },
+        'bootstrap' => sub { bootstrap($couch, $app) });
 
+    say "Planet-Express-Ship CouchDB tools";
+
+    #load($couch, $app) if $load == 1;
 }
 
 sub load {
@@ -46,6 +50,7 @@ sub load {
 
     my $view = {};
 
+    say "Loading views";
     my ($f) = File::Util->new();
     foreach my $dir (_get_files($app->{config}->{couch}->{view_dir}, 'dir')) {
         foreach my $file (
@@ -89,12 +94,13 @@ sub load {
         print "Saved $id\n" if $id;
         print "Error saving views!\n" unless $id;
     }
-    exit;
+    return;
 }
 
-sub dump {
+sub cdump {
     my ($couch, $app) = @_;
 
+    say "Dumping views ...";
     my $docs = $couch->get_doc(
         { id => '_all_docs?startkey="_design"&endkey="_design0"' });
     foreach my $row (@{ $docs->{rows} }) {
@@ -129,14 +135,14 @@ sub dump {
         }
 
     }
-    exit;
+    return;
 }
 
 sub create {
     my ($couch, $app) = @_;
 
     say "Setting up your CouchDB";
-    exit;
+    return;
 
 }
 
@@ -145,7 +151,7 @@ sub bootstrap {
 
     create($couch, $app);
     load($couch, $app);
-    exit;
+    return;
 }
 
 sub npm_install {

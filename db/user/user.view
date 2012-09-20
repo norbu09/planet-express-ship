@@ -11,5 +11,5 @@
 [params]
 name = user
 language = javascript
-_id = _design/site
-_rev = 1-c4a9eca046bb8c3abdebc9e28c95b546
+_id = _design/user
+_rev = 1-e39ad7ac2743336e70a0342444384c7c

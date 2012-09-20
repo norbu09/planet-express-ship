@@ -7,8 +7,9 @@
 
 
 
+
 [params]
 name = templates
 language = javascript
 _id = _design/site
-_rev = 8-bbf51529c95ab2aa23e7944ca020596e
+_rev = 1-c4a9eca046bb8c3abdebc9e28c95b546
