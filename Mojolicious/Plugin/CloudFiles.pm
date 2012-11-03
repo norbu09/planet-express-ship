@@ -23,7 +23,7 @@ sub register {
                 ? $prefix . '-' . $blob->filename
                 : $blob->filename
             );
-            $filename =~ s/[^\w\d-_\.]/_/g;
+            $filename =~ s/[^\w\d_\.-]/_/g;
             my $file = $c->object(
                 name         => $filename,
                 content_type => mime_type($blob->slurp));
