@@ -11,6 +11,8 @@ plugin 'CouchAuth', $config->{couch};
 plugin 'MicroPage', $config->{couch};
 plugin 'FormValidate';
 plugin 'Mail', $config->{mail};
+plugin 'Uploader';
+plugin 'CloudFiles';
 
 # replace 'CouchAuth' with this to have facebook auth:
 #plugin 'FacebookAuth', $config->{facebook};
@@ -217,6 +219,21 @@ group {
             $self->stash(code => $code);
         }
     };
+
+    ## image handling
+    post '/upload/:id' => sub {
+        my $self = shift;
+
+        my $upload =
+            $self->upload_file($self->param('file'), $self->param('id'));
+
+        unless (exists $upload->{error}) {
+            # do something with the $upload->{url} parameter like saving it somewhere
+        }
+    
+        $self->render_json($upload);
+    };  
+
 };
 
 # Admin section
