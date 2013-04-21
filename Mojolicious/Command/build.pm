@@ -10,6 +10,9 @@ has description => "Build the Bootstrap CSS and JS files.\n";
 has usage => <<"EOF";
 usage: $0 build
 
+build is an easy way to recompile your bootstrap theme and
+combine/minify the javascript in /js
+
 These options are available:
   -i, --npm_install   Runs npm to install/update node modules
 EOF
@@ -30,11 +33,10 @@ sub run {
 sub build_js {
     
     say "Combining and minifying JS";
-    say "running `jshint` " . qx{jshint ./js/*.js --config ./js/.jshintrc};
-    say "running `jshint` " . qx{jshint ./js/tests/unit/*.js --config ./js/.jshintrc};
+    say "running `jshint` " . qx{./node_modules/.bin/jshint ./js/*.js --config ./js/.jshintrc};
 
     say "combining JS " . qx{cat ./js/*js > ./public/js/bootstrap.js};
-    say "running `uglifyjs`" .  qx{uglifyjs -nc ./public/js/bootstrap.js > ./public/js/bootstrap.min.tmp.js};
+    say "running `uglifyjs`" .  qx{./node_modules/.bin/uglifyjs -nc ./public/js/bootstrap.js > ./public/js/bootstrap.min.tmp.js};
     qx{echo "/**\n* Bootstrap.js by \@fat & \@mdo\n* Copyright 2012 Twitter, Inc.\n* http://www.apache.org/licenses/LICENSE-2.0.txt\n*/" > ./public/js/copyright.js};
     say "creating bootstrap.min.js " . qx{cat ./public/js/copyright.js ./public/js/bootstrap.min.tmp.js > ./public/js/bootstrap.min.js};
     say "cleaning up " . qx{rm ./public/js/copyright.js ./public/js/bootstrap.min.tmp.js};
@@ -43,9 +45,11 @@ sub build_js {
 
 sub build_css {
     
-    say "Compiling less to CSS"
-    say "running `recess` " . qx{recess --compile ./css/bootstrap.less > ./public/css/bootstrap.css};
-    say "running `recess` " . qx{recess --compile ./css/responsive.less > ./public/css/bootstrap-responsive.css};
+    say "Compiling less to CSS";
+    say "running `recess` " . qx{./node_modules/.bin/recess --compile ./css/bootstrap.less > ./public/css/bootstrap.css};
+    say "running `recess` " . qx{./node_modules/.bin/recess --compress ./css/bootstrap.less > ./public/css/bootstrap.min.css};
+    say "running `recess` " . qx{./node_modules/.bin/recess --compile ./css/responsive.less > ./public/css/bootstrap-responsive.css};
+    say "running `recess` " . qx{./node_modules/.bin/recess --compress ./css/responsive.less > ./public/css/bootstrap-responsive.min.css};
 }
 
 sub npm_install {
