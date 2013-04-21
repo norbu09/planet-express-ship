@@ -142,6 +142,9 @@ sub create {
     my ($couch, $app) = @_;
 
     say "Setting up your CouchDB";
+
+    $couch->create_db();
+
     return;
 
 }
