@@ -120,7 +120,7 @@ sub register {
                 return;
             }
             $params->{type}   = 'user';
-            $params->{active} = Mojo::JSON->true;
+            $params->{active} = 1;
             my $id = $couch->put_doc({ doc => $params });
             $self->auth();
             return $id;
